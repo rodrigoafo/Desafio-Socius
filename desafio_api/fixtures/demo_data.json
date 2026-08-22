@@ -1,0 +1,134 @@
+[
+  {
+    "model": "desafio_api.recruitmentsearch",
+    "pk": 1,
+    "fields": {
+      "position": "Desarrollador Backend",
+      "practice": "Tecnología",
+      "priority": "HIGH",
+      "status": "ACTIVE",
+      "opening_date": "2026-08-10",
+      "requester": "Carolina Pérez",
+      "description": "Búsqueda de desarrollador con experiencia en Python y APIs REST.",
+      "public_id": "ea4ef9fb-a17b-48e7-9530-114d1515e3d1",
+      "created_at": "2026-08-10T09:00:00Z",
+      "updated_at": "2026-08-10T09:00:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.recruitmentsearch",
+    "pk": 2,
+    "fields": {
+      "position": "Consultor SAP",
+      "practice": "Consultoría",
+      "priority": "MEDIUM",
+      "status": "IN_PROCESS",
+      "opening_date": "2026-08-13",
+      "requester": "Javier Muñoz",
+      "description": "Proyecto de implementación SAP para cliente del sector retail.",
+      "public_id": "79f451fc-e4e4-408f-a79c-fafb4aa2fbb3",
+      "created_at": "2026-08-13T11:30:00Z",
+      "updated_at": "2026-08-13T11:30:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.recruitmentsearch",
+    "pk": 3,
+    "fields": {
+      "position": "Data Engineer",
+      "practice": "Data & Analytics",
+      "priority": "LOW",
+      "status": "INTERVIEW",
+      "opening_date": "2026-08-15",
+      "requester": "Sofía Rojas",
+      "description": "Búsqueda para fortalecer el equipo de datos e integración.",
+      "public_id": "d8f5e137-47b2-462c-b16a-0291a78045aa",
+      "created_at": "2026-08-15T15:00:00Z",
+      "updated_at": "2026-08-15T15:00:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.candidate",
+    "pk": 1,
+    "fields": {
+      "first_name": "María",
+      "last_name": "González",
+      "email": "maria.gonzalez@example.com",
+      "phone": "+56 9 5555 0101",
+      "experience_years": 5,
+      "region": "Metropolitana",
+      "modality": "HYBRID",
+      "linkedin": "https://www.linkedin.com/in/maria-gonzalez-demo",
+      "cv_file": "",
+      "created_at": "2026-08-11T10:00:00Z",
+      "updated_at": "2026-08-11T10:00:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.candidate",
+    "pk": 2,
+    "fields": {
+      "first_name": "Diego",
+      "last_name": "Silva",
+      "email": "diego.silva@example.com",
+      "phone": "+56 9 5555 0102",
+      "experience_years": 7,
+      "region": "Valparaíso",
+      "modality": "REMOTE",
+      "linkedin": "https://www.linkedin.com/in/diego-silva-demo",
+      "cv_file": "",
+      "created_at": "2026-08-14T12:00:00Z",
+      "updated_at": "2026-08-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.candidate",
+    "pk": 3,
+    "fields": {
+      "first_name": "Antonia",
+      "last_name": "Vega",
+      "email": "antonia.vega@example.com",
+      "phone": "+56 9 5555 0103",
+      "experience_years": 3,
+      "region": "Biobío",
+      "modality": "ONSITE",
+      "linkedin": "",
+      "cv_file": "",
+      "created_at": "2026-08-16T09:15:00Z",
+      "updated_at": "2026-08-16T09:15:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.application",
+    "pk": 1,
+    "fields": {
+      "candidate": 1,
+      "recruitment_search": 1,
+      "status": "REVIEW",
+      "applied_at": "2026-08-12T10:00:00Z",
+      "updated_at": "2026-08-13T14:30:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.application",
+    "pk": 2,
+    "fields": {
+      "candidate": 2,
+      "recruitment_search": 1,
+      "status": "INTERVIEW",
+      "applied_at": "2026-08-14T13:00:00Z",
+      "updated_at": "2026-08-16T16:00:00Z"
+    }
+  },
+  {
+    "model": "desafio_api.application",
+    "pk": 3,
+    "fields": {
+      "candidate": 3,
+      "recruitment_search": 3,
+      "status": "APPLIED",
+      "applied_at": "2026-08-17T09:30:00Z",
+      "updated_at": "2026-08-17T09:30:00Z"
+    }
+  }
+]
