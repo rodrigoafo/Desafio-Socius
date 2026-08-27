@@ -14,6 +14,7 @@ import './App.css'
 const drawerWidth = 250
 const priorities = { HIGH: 'Alta', MEDIUM: 'Media', LOW: 'Baja' }
 const searchStatuses = { ACTIVE: 'Activa', IN_PROCESS: 'En proceso', INTERVIEW: 'En entrevistas', CLOSED: 'Cerrada' }
+const applicationStatuses = { APPLIED: 'Postulado', REVIEW: 'En revisión', INTERVIEW: 'Entrevista', SELECTED: 'Seleccionado', REJECTED: 'Descartado' }
 const modalities = { ONSITE: 'Presencial', HYBRID: 'Híbrido', REMOTE: 'Remoto' }
 const blankSearch = { position: '', practice: '', priority: 'MEDIUM', status: 'ACTIVE', opening_date: '', requester: '', description: '' }
 const blankCandidate = { first_name: '', last_name: '', email: '', phone: '', experience_years: '', region: '', modality: 'HYBRID', linkedin: '', cv_file: null }
@@ -80,6 +81,62 @@ function CandidateDialog({ open, onClose, onSaved }) {
   </DialogContent><DialogActions><Button onClick={onClose} color="inherit">Cancelar</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Guardando…' : 'Registrar candidato'}</Button></DialogActions></Box></Dialog>
 }
 
+function ApplicationDialog({ candidate, open, onClose, onSaved }) {
+  const [searches, setSearches] = useState([])
+  const [searchId, setSearchId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const request = window.setTimeout(async () => {
+      setLoading(true)
+      try {
+        const response = await api.get('/searches/', { params: { status: 'ACTIVE' } })
+        setSearches(response.data)
+        setSearchId(response.data[0] ? String(response.data[0].id) : '')
+      } catch (error) {
+        toast.error(messageFrom(error, 'No se pudieron cargar las búsquedas activas'))
+      } finally {
+        setLoading(false)
+      }
+    }, 0)
+
+    return () => window.clearTimeout(request)
+  }, [open])
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (!candidate || !searchId) return
+
+    setSaving(true)
+    try {
+      await api.post('/applications/', {
+        candidate: candidate.id,
+        recruitment_search: Number(searchId),
+        status: 'APPLIED',
+      })
+      toast.success(`${candidate.full_name} fue asociado a la búsqueda`)
+      onSaved()
+      onClose()
+    } catch (error) {
+      toast.error(messageFrom(error, 'No fue posible crear la postulación'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs"><Box component="form" onSubmit={submit}>
+    <DialogTitle>Asociar a una búsqueda</DialogTitle>
+    <DialogContent className="dialog-form">
+      <Typography className="dialog-description">Crearás una postulación en estado <strong>Postulado</strong> para {candidate?.full_name ?? 'este candidato'}.</Typography>
+      {loading ? <Box className="dialog-loading"><CircularProgress size={26} /></Box> : searches.length === 0 ? <Alert severity="info">No hay búsquedas activas disponibles para asociar.</Alert> : <FormControl fullWidth required><InputLabel id="application-search-label">Búsqueda activa</InputLabel><Select labelId="application-search-label" label="Búsqueda activa" value={searchId} onChange={(event) => setSearchId(event.target.value)}>{searches.map((search) => <MenuItem key={search.id} value={String(search.id)}>{search.position} · {search.practice}</MenuItem>)}</Select></FormControl>}
+    </DialogContent>
+    <DialogActions><Button onClick={onClose} color="inherit">Cancelar</Button><Button type="submit" variant="contained" disabled={loading || saving || !searchId}>{saving ? 'Asociando…' : 'Crear postulación'}</Button></DialogActions>
+  </Box></Dialog>
+}
+
 function Searches({ refreshSummary }) {
   const [searches, setSearches] = useState([])
   const [summary, setSummary] = useState(null)
@@ -111,18 +168,20 @@ function Candidates({ refreshSummary }) {
   const [filters, setFilters] = useState({ name: '', search: '' })
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [applicationCandidate, setApplicationCandidate] = useState(null)
   const load = useCallback(async () => { setLoading(true); try { const [candidateResult, applicationResult] = await Promise.all([api.get('/candidates/', { params: filters }), api.get('/applications/')]); setCandidates(candidateResult.data); setApplications(applicationResult.data) } catch (error) { toast.error(messageFrom(error, 'No se pudo cargar la base de talentos')) } finally { setLoading(false) } }, [filters])
   useEffect(() => {
     const request = window.setTimeout(() => { void load() }, 0)
     return () => window.clearTimeout(request)
   }, [load])
-  const positions = useMemo(() => applications.reduce((current, application) => ({ ...current, [application.candidate]: current[application.candidate] ?? application.recruitment_search_position }), {}), [applications])
+  const applicationsByCandidate = useMemo(() => applications.reduce((current, application) => ({ ...current, [application.candidate]: current[application.candidate] ?? application }), {}), [applications])
   const change = (field) => (event) => setFilters((current) => ({ ...current, [field]: event.target.value }))
   return <><Box className="heading"><Box><Typography className="eyebrow">BASE DE TALENTOS</Typography><Typography variant="h4">Candidatos</Typography><Typography className="subtitle">Explora perfiles disponibles y sus postulaciones activas.</Typography></Box><Button variant="contained" className="main-action" onClick={() => setDialogOpen(true)}>+ Registrar candidato</Button></Box>
     <Paper className="filter-panel candidate-filter" elevation={0}><TextField label="Buscar por nombre" value={filters.name} onChange={change('name')} size="small" fullWidth /><TextField label="ID de búsqueda" placeholder="Ej. 1" value={filters.search} onChange={change('search')} size="small" /></Paper>
     <Box className="table-heading"><Typography fontWeight={800}>{candidates.length} candidatos</Typography><Typography variant="body2">Talento registrado en Socius</Typography></Box>
-    <TableContainer component={Paper} className="data-table" elevation={0}><Table><TableHead><TableRow><TableCell>Candidato</TableCell><TableCell>Cargo asociado</TableCell><TableCell>Experiencia</TableCell><TableCell>Región</TableCell><TableCell>Modalidad</TableCell><TableCell>Ingreso</TableCell><TableCell align="right">CV</TableCell></TableRow></TableHead><TableBody>{loading ? <TableRow><TableCell colSpan={7} align="center" className="table-state"><CircularProgress size={26} /></TableCell></TableRow> : candidates.length === 0 ? <TableRow><TableCell colSpan={7} align="center" className="table-state">No encontramos candidatos con estos filtros.</TableCell></TableRow> : candidates.map((candidate) => <TableRow key={candidate.id} hover><TableCell><Typography fontWeight={800}>{candidate.full_name}</Typography><Typography variant="caption">{candidate.email}</Typography></TableCell><TableCell>{positions[candidate.id] ?? 'Base de talentos'}</TableCell><TableCell>{candidate.experience_years} años</TableCell><TableCell>{candidate.region}</TableCell><TableCell><Chip label={modalities[candidate.modality]} size="small" className="modality" /></TableCell><TableCell>{dateLabel(candidate.created_at?.slice(0, 10))}</TableCell><TableCell align="right">{candidate.cv_file ? <Button href={candidate.cv_file} target="_blank" size="small">Ver CV</Button> : <Typography variant="caption">Sin archivo</Typography>}</TableCell></TableRow>)}</TableBody></Table></TableContainer>
-    <CandidateDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSaved={() => { load(); refreshSummary() }} /></>
+    <TableContainer component={Paper} className="data-table" elevation={0}><Table><TableHead><TableRow><TableCell>Candidato</TableCell><TableCell>Cargo asociado</TableCell><TableCell>Postulación</TableCell><TableCell>Experiencia</TableCell><TableCell>Región</TableCell><TableCell>Modalidad</TableCell><TableCell>Ingreso</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead><TableBody>{loading ? <TableRow><TableCell colSpan={8} align="center" className="table-state"><CircularProgress size={26} /></TableCell></TableRow> : candidates.length === 0 ? <TableRow><TableCell colSpan={8} align="center" className="table-state">No encontramos candidatos con estos filtros.</TableCell></TableRow> : candidates.map((candidate) => { const application = applicationsByCandidate[candidate.id]; return <TableRow key={candidate.id} hover><TableCell><Typography fontWeight={800}>{candidate.full_name}</Typography><Typography variant="caption">{candidate.email}</Typography></TableCell><TableCell>{application?.recruitment_search_position ?? 'Base de talentos'}</TableCell><TableCell>{application ? <Chip label={applicationStatuses[application.status]} size="small" className="application-status" /> : <Typography variant="caption">Sin postulación</Typography>}</TableCell><TableCell>{candidate.experience_years} años</TableCell><TableCell>{candidate.region}</TableCell><TableCell><Chip label={modalities[candidate.modality]} size="small" className="modality" /></TableCell><TableCell>{dateLabel(candidate.created_at?.slice(0, 10))}</TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{candidate.cv_file && <Button href={candidate.cv_file} target="_blank" size="small">CV</Button>}<Button size="small" variant="outlined" onClick={() => setApplicationCandidate(candidate)}>Postular</Button></Stack></TableCell></TableRow> })}</TableBody></Table></TableContainer>
+    <CandidateDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSaved={() => { load(); refreshSummary() }} />
+    <ApplicationDialog candidate={applicationCandidate} open={Boolean(applicationCandidate)} onClose={() => setApplicationCandidate(null)} onSaved={() => { load(); refreshSummary() }} /></>
 }
 
 function App() {

@@ -401,6 +401,24 @@
     text-transform: none !important;
 }
 
+.dialog-description {
+    color: var(--muted);
+    line-height: 1.55 !important;
+}
+
+.dialog-loading {
+    display: grid;
+    min-height: 72px;
+    place-items: center;
+}
+
+.application-status {
+    color: #7e4d11 !important;
+    background: #fff0c7 !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+}
+
 @media (max-width: 960px) {
     .app-drawer .MuiDrawer-paper {
         width: 72px !important;
