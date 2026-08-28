@@ -74,6 +74,13 @@ class RecruitmentApiTests(APITestCase):
         self.assertEqual(filter_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(filter_response.data), 2)
 
+        status_filter_response = self.client.get(
+            "/api/candidates/", {"status": "INTERVIEW"}
+        )
+        self.assertEqual(status_filter_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(status_filter_response.data), 1)
+        self.assertEqual(status_filter_response.data[0]["full_name"], "Diego Silva")
+
         invalid_cv = SimpleUploadedFile(
             "cv-invalido.pdf", b"esto no es un PDF", content_type="application/pdf"
         )

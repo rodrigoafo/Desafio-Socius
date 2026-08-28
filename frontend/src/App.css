@@ -266,7 +266,7 @@
 
 .candidate-filter {
     display: grid;
-    grid-template-columns: 1fr 190px;
+    grid-template-columns: 1fr 240px 190px;
     gap: 12px;
 }
 

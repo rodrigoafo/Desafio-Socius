@@ -51,6 +51,7 @@ class CandidateViewSet(viewsets.ModelViewSet):
         region = self.request.query_params.get("region")
         modality = self.request.query_params.get("modality")
         recruitment_search = self.request.query_params.get("search")
+        application_status = self.request.query_params.get("status")
 
         if name:
             queryset = queryset.filter(
@@ -66,6 +67,8 @@ class CandidateViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(
                 applications__recruitment_search_id=recruitment_search
             ).distinct()
+        if application_status:
+            queryset = queryset.filter(applications__status=application_status).distinct()
 
         return queryset
 
