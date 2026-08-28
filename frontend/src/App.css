@@ -470,6 +470,47 @@
     padding-bottom: 7px;
 }
 
+.candidate-profile-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.candidate-profile-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    color: #08726d !important;
+    background: #ddf1ec !important;
+    font-weight: 800 !important;
+}
+
+.candidate-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f5f8f8;
+}
+
+.profile-label,
+.profile-section-title {
+    margin-bottom: 4px !important;
+    color: #64748b;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.08em !important;
+}
+
+.candidate-profile-links {
+    margin-top: -2px;
+}
+
+.profile-section-title {
+    margin-top: 6px !important;
+    margin-bottom: -4px !important;
+}
+
 @media (max-width: 960px) {
     .app-drawer .MuiDrawer-paper {
         width: 72px !important;
