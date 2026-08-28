@@ -459,6 +459,17 @@
     white-space: nowrap;
 }
 
+.application-status-control {
+    min-width: 142px;
+}
+
+.application-status-control .MuiSelect-select {
+    font-size: 12px;
+    font-weight: 750;
+    padding-top: 7px;
+    padding-bottom: 7px;
+}
+
 @media (max-width: 960px) {
     .app-drawer .MuiDrawer-paper {
         width: 72px !important;

@@ -64,6 +64,7 @@ function SearchDialog({ open, onClose, onSaved }) {
 function SearchApplicationsDialog({ search, open, onClose }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(false)
+  const [savingId, setSavingId] = useState(null)
 
   useEffect(() => {
     if (!open || !search) return undefined
@@ -83,11 +84,26 @@ function SearchApplicationsDialog({ search, open, onClose }) {
     return () => window.clearTimeout(request)
   }, [open, search])
 
+  const updateStatus = async (application, status) => {
+    if (status === application.status) return
+
+    setSavingId(application.id)
+    try {
+      await api.patch(`/applications/${application.id}/`, { status })
+      setApplications((current) => current.map((item) => item.id === application.id ? { ...item, status } : item))
+      toast.success(`Estado de ${application.candidate_name} actualizado`)
+    } catch (error) {
+      toast.error(messageFrom(error, 'No fue posible actualizar el estado'))
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
     <DialogTitle>Postulaciones · {search?.position}</DialogTitle>
     <DialogContent className="dialog-form">
       <Typography className="dialog-description">{search?.practice} · Solicitante: {search?.requester}</Typography>
-      {loading ? <Box className="dialog-loading"><CircularProgress size={26} /></Box> : applications.length === 0 ? <Alert severity="info">Esta búsqueda todavía no tiene postulaciones.</Alert> : <TableContainer component={Paper} variant="outlined" className="applications-table"><Table size="small"><TableHead><TableRow><TableCell>Candidato</TableCell><TableCell>Correo</TableCell><TableCell>Estado</TableCell><TableCell>Fecha</TableCell></TableRow></TableHead><TableBody>{applications.map((application) => <TableRow key={application.id}><TableCell><Typography fontWeight={700}>{application.candidate_name}</Typography></TableCell><TableCell>{application.candidate_email}</TableCell><TableCell><Chip label={applicationStatuses[application.status]} size="small" className={`application-status application-status--${application.status.toLowerCase()}`} /></TableCell><TableCell>{dateLabel(application.applied_at?.slice(0, 10))}</TableCell></TableRow>)}</TableBody></Table></TableContainer>}
+      {loading ? <Box className="dialog-loading"><CircularProgress size={26} /></Box> : applications.length === 0 ? <Alert severity="info">Esta búsqueda todavía no tiene postulaciones.</Alert> : <TableContainer component={Paper} variant="outlined" className="applications-table"><Table size="small"><TableHead><TableRow><TableCell>Candidato</TableCell><TableCell>Correo</TableCell><TableCell>Estado</TableCell><TableCell>Fecha</TableCell></TableRow></TableHead><TableBody>{applications.map((application) => <TableRow key={application.id}><TableCell><Typography fontWeight={700}>{application.candidate_name}</Typography></TableCell><TableCell>{application.candidate_email}</TableCell><TableCell><FormControl size="small" className="application-status-control"><Select value={application.status} onChange={(event) => updateStatus(application, event.target.value)} aria-label={`Estado de ${application.candidate_name}`} disabled={savingId === application.id}>{Object.entries(applicationStatuses).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</Select></FormControl></TableCell><TableCell>{dateLabel(application.applied_at?.slice(0, 10))}</TableCell></TableRow>)}</TableBody></Table></TableContainer>}
     </DialogContent>
     <DialogActions><Button onClick={onClose} color="inherit">Cerrar</Button></DialogActions>
   </Dialog>
