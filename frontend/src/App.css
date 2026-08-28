@@ -335,6 +335,17 @@
     font-weight: 800;
 }
 
+.count--action {
+    min-width: 30px !important;
+    padding: 0 !important;
+    text-transform: none !important;
+}
+
+.count--action:hover {
+    color: #075b57;
+    background: #c7e7de;
+}
+
 .priority,
 .state,
 .modality {
@@ -417,6 +428,35 @@
     background: #fff0c7 !important;
     font-size: 11px !important;
     font-weight: 800 !important;
+}
+
+.application-status--applied {
+    color: #42618b !important;
+    background: #e5edf8 !important;
+}
+
+.application-status--review {
+    color: #7e4d11 !important;
+    background: #fff0c7 !important;
+}
+
+.application-status--interview {
+    color: #b94d2f !important;
+    background: #fbe6dc !important;
+}
+
+.application-status--selected {
+    color: #08726d !important;
+    background: #dff3ec !important;
+}
+
+.application-status--rejected {
+    color: #5c6874 !important;
+    background: #edf0f2 !important;
+}
+
+.applications-table .MuiTableCell-root {
+    white-space: nowrap;
 }
 
 @media (max-width: 960px) {

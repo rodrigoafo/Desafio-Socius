@@ -61,6 +61,38 @@ function SearchDialog({ open, onClose, onSaved }) {
   </DialogContent><DialogActions><Button onClick={onClose} color="inherit">Cancelar</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Guardando…' : 'Crear búsqueda'}</Button></DialogActions></Box></Dialog>
 }
 
+function SearchApplicationsDialog({ search, open, onClose }) {
+  const [applications, setApplications] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open || !search) return undefined
+
+    const request = window.setTimeout(async () => {
+      setLoading(true)
+      try {
+        const response = await api.get('/applications/', { params: { search: search.id } })
+        setApplications(response.data)
+      } catch (error) {
+        toast.error(messageFrom(error, 'No se pudieron cargar las postulaciones'))
+      } finally {
+        setLoading(false)
+      }
+    }, 0)
+
+    return () => window.clearTimeout(request)
+  }, [open, search])
+
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <DialogTitle>Postulaciones · {search?.position}</DialogTitle>
+    <DialogContent className="dialog-form">
+      <Typography className="dialog-description">{search?.practice} · Solicitante: {search?.requester}</Typography>
+      {loading ? <Box className="dialog-loading"><CircularProgress size={26} /></Box> : applications.length === 0 ? <Alert severity="info">Esta búsqueda todavía no tiene postulaciones.</Alert> : <TableContainer component={Paper} variant="outlined" className="applications-table"><Table size="small"><TableHead><TableRow><TableCell>Candidato</TableCell><TableCell>Correo</TableCell><TableCell>Estado</TableCell><TableCell>Fecha</TableCell></TableRow></TableHead><TableBody>{applications.map((application) => <TableRow key={application.id}><TableCell><Typography fontWeight={700}>{application.candidate_name}</Typography></TableCell><TableCell>{application.candidate_email}</TableCell><TableCell><Chip label={applicationStatuses[application.status]} size="small" className={`application-status application-status--${application.status.toLowerCase()}`} /></TableCell><TableCell>{dateLabel(application.applied_at?.slice(0, 10))}</TableCell></TableRow>)}</TableBody></Table></TableContainer>}
+    </DialogContent>
+    <DialogActions><Button onClick={onClose} color="inherit">Cerrar</Button></DialogActions>
+  </Dialog>
+}
+
 function CandidateDialog({ open, onClose, onSaved }) {
   const [form, setForm] = useState(blankCandidate)
   const [saving, setSaving] = useState(false)
@@ -143,6 +175,7 @@ function Searches({ refreshSummary }) {
   const [filters, setFilters] = useState({ position: '', practice: '', priority: '', status: '' })
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedSearch, setSelectedSearch] = useState(null)
   const load = useCallback(async () => {
     setLoading(true)
     try { const [searchResult, dashboardResult] = await Promise.all([api.get('/searches/', { params: filters }), api.get('/dashboard/')]); setSearches(searchResult.data); setSummary(dashboardResult.data) } catch (error) { toast.error(messageFrom(error, 'No se pudo cargar la información de búsquedas')) } finally { setLoading(false) }
@@ -158,8 +191,9 @@ function Searches({ refreshSummary }) {
     <Box className="stats"><StatCard label="Búsquedas activas" value={summary?.active_searches} tone="teal" /><StatCard label="En proceso" value={summary?.in_process} tone="blue" /><StatCard label="En entrevistas" value={summary?.in_interview} tone="coral" /><StatCard label="Candidatos totales" value={summary?.total_candidates} tone="gold" /></Box>
     <Paper className="filter-panel" elevation={0}><Box className="filter-title"><span>⌕</span><Typography fontWeight={800}>Filtrar búsquedas</Typography></Box><Box className="filter-grid"><TextField label="Posición" value={filters.position} onChange={change('position')} size="small" fullWidth /><TextField label="Práctica" value={filters.practice} onChange={change('practice')} size="small" fullWidth /><FormControl size="small" fullWidth><InputLabel id="search-priority-filter">Prioridad</InputLabel><Select labelId="search-priority-filter" label="Prioridad" value={filters.priority} onChange={change('priority')}><MenuItem value="">Todas</MenuItem>{Object.entries(priorities).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</Select></FormControl><FormControl size="small" fullWidth><InputLabel id="search-status-filter">Estado</InputLabel><Select labelId="search-status-filter" label="Estado" value={filters.status} onChange={change('status')}><MenuItem value="">Todos</MenuItem>{Object.entries(searchStatuses).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</Select></FormControl></Box></Paper>
     <Box className="table-heading"><Typography fontWeight={800}>{searches.length} resultados</Typography><Typography variant="body2">Actualizado desde la base de datos</Typography></Box>
-    <TableContainer component={Paper} className="data-table" elevation={0}><Table><TableHead><TableRow><TableCell>Posición</TableCell><TableCell>Práctica</TableCell><TableCell>Prioridad</TableCell><TableCell>Estado</TableCell><TableCell>Apertura</TableCell><TableCell>Solicitante</TableCell><TableCell align="center">Candidatos</TableCell><TableCell /></TableRow></TableHead><TableBody>{loading ? <TableRow><TableCell colSpan={8} align="center" className="table-state"><CircularProgress size={26} /></TableCell></TableRow> : searches.length === 0 ? <TableRow><TableCell colSpan={8} align="center" className="table-state">No encontramos búsquedas con estos filtros.</TableCell></TableRow> : searches.map((search) => <TableRow key={search.id} hover><TableCell><Typography fontWeight={800}>{search.position}</Typography><Typography variant="caption">#{search.id}</Typography></TableCell><TableCell>{search.practice}</TableCell><TableCell><Chip label={priorities[search.priority]} size="small" className={`priority priority--${search.priority.toLowerCase()}`} /></TableCell><TableCell><Chip label={searchStatuses[search.status]} size="small" className={`state state--${search.status.toLowerCase()}`} /></TableCell><TableCell>{dateLabel(search.opening_date)}</TableCell><TableCell>{search.requester}</TableCell><TableCell align="center"><Box className="count">{search.candidate_count}</Box></TableCell><TableCell align="right"><Button size="small" onClick={() => copyLink(search.public_id)}>Copiar link</Button></TableCell></TableRow>)}</TableBody></Table></TableContainer>
-    <SearchDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSaved={saved} /></>
+    <TableContainer component={Paper} className="data-table" elevation={0}><Table><TableHead><TableRow><TableCell>Posición</TableCell><TableCell>Práctica</TableCell><TableCell>Prioridad</TableCell><TableCell>Estado</TableCell><TableCell>Apertura</TableCell><TableCell>Solicitante</TableCell><TableCell align="center">Candidatos</TableCell><TableCell /></TableRow></TableHead><TableBody>{loading ? <TableRow><TableCell colSpan={8} align="center" className="table-state"><CircularProgress size={26} /></TableCell></TableRow> : searches.length === 0 ? <TableRow><TableCell colSpan={8} align="center" className="table-state">No encontramos búsquedas con estos filtros.</TableCell></TableRow> : searches.map((search) => <TableRow key={search.id} hover><TableCell><Typography fontWeight={800}>{search.position}</Typography><Typography variant="caption">#{search.id}</Typography></TableCell><TableCell>{search.practice}</TableCell><TableCell><Chip label={priorities[search.priority]} size="small" className={`priority priority--${search.priority.toLowerCase()}`} /></TableCell><TableCell><Chip label={searchStatuses[search.status]} size="small" className={`state state--${search.status.toLowerCase()}`} /></TableCell><TableCell>{dateLabel(search.opening_date)}</TableCell><TableCell>{search.requester}</TableCell><TableCell align="center"><Button className="count count--action" aria-label={`Ver candidatos de ${search.position}`} onClick={() => setSelectedSearch(search)}>{search.candidate_count}</Button></TableCell><TableCell align="right"><Button size="small" onClick={() => copyLink(search.public_id)}>Copiar link</Button></TableCell></TableRow>)}</TableBody></Table></TableContainer>
+    <SearchDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSaved={saved} />
+    <SearchApplicationsDialog search={selectedSearch} open={Boolean(selectedSearch)} onClose={() => setSelectedSearch(null)} /></>
 }
 
 function Candidates({ refreshSummary }) {
