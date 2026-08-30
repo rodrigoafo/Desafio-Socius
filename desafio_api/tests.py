@@ -2,6 +2,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
+from urllib.parse import urlsplit
 
 from .models import Application, Candidate
 
@@ -66,8 +67,12 @@ class RecruitmentApiTests(APITestCase):
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(create_response.data["full_name"], "Lucía Prueba")
+        self.assertTrue(create_response.data["cv_file"])
 
+        cv_path = urlsplit(create_response.data["cv_file"]).path
         candidate = Candidate.objects.get(pk=create_response.data["id"])
+        self.assertEqual(candidate.cv_file.url, cv_path)
+        self.assertTrue(candidate.cv_file.storage.exists(candidate.cv_file.name))
         candidate.cv_file.delete(save=False)
 
         filter_response = self.client.get("/api/candidates/", {"search": 1})
