@@ -28,6 +28,18 @@ const messageFrom = (error, fallback) => {
   return field && Array.isArray(data[field]) ? data[field][0] : fallback
 }
 
+const fieldErrorsFrom = (error) => {
+  const data = error.response?.data
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return {}
+
+  return Object.entries(data).reduce((errors, [field, messages]) => {
+    if (field !== 'detail' && field !== 'non_field_errors') {
+      errors[field] = Array.isArray(messages) ? messages[0] : String(messages)
+    }
+    return errors
+  }, {})
+}
+
 const dateLabel = (date) => date ? new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium' }).format(new Date(`${date}T12:00:00`)) : '—'
 
 function StatCard({ label, value, tone }) {
@@ -53,17 +65,36 @@ function Sidebar({ candidateCount }) {
 function SearchDialog({ open, onClose, onSaved, search }) {
   const [form, setForm] = useState(() => searchForm(search))
   const [saving, setSaving] = useState(false)
-  const change = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [formError, setFormError] = useState('')
+  const change = (field) => (event) => { setForm((current) => ({ ...current, [field]: event.target.value })); setFieldErrors((current) => ({ ...current, [field]: undefined })); setFormError('') }
+
+  const validate = () => {
+    const errors = {}
+    if (!form.position.trim()) errors.position = 'Ingresa la posición buscada.'
+    if (!form.practice.trim()) errors.practice = 'Ingresa la práctica.'
+    if (!form.opening_date) errors.opening_date = 'Selecciona la fecha de apertura.'
+    if (!form.requester.trim()) errors.requester = 'Ingresa el nombre del solicitante.'
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   const submit = async (event) => {
-    event.preventDefault(); setSaving(true)
-    try { if (search) { await api.patch(`/searches/${search.id}/`, form); toast.success('Búsqueda actualizada correctamente') } else { await api.post('/searches/', form); toast.success('Búsqueda creada correctamente') }; setForm(blankSearch); onSaved(); onClose() } catch (error) { toast.error(messageFrom(error, search ? 'No fue posible actualizar la búsqueda' : 'No fue posible crear la búsqueda')) } finally { setSaving(false) }
+    event.preventDefault()
+    setFormError('')
+    if (!validate()) {
+      setFormError('Completa los campos obligatorios para continuar.')
+      return
+    }
+    setSaving(true)
+    try { if (search) { await api.patch(`/searches/${search.id}/`, form); toast.success('Búsqueda actualizada correctamente') } else { await api.post('/searches/', form); toast.success('Búsqueda creada correctamente') }; setForm(blankSearch); onSaved(); onClose() } catch (error) { const message = messageFrom(error, search ? 'No fue posible actualizar la búsqueda' : 'No fue posible crear la búsqueda'); setFieldErrors(fieldErrorsFrom(error)); setFormError(message); toast.error(message) } finally { setSaving(false) }
   }
-  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm"><Box component="form" onSubmit={submit}><DialogTitle>{search ? 'Editar búsqueda' : 'Nueva búsqueda'}</DialogTitle><DialogContent className="dialog-form">
-    <TextField label="Posición" value={form.position} onChange={change('position')} required fullWidth />
-    <TextField label="Práctica" value={form.practice} onChange={change('practice')} required fullWidth />
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm"><Box component="form" noValidate onSubmit={submit}><DialogTitle>{search ? 'Editar búsqueda' : 'Nueva búsqueda'}</DialogTitle><DialogContent className="dialog-form">
+    {formError && <Alert severity="error">{formError}</Alert>}
+    <TextField label="Posición" value={form.position} onChange={change('position')} error={Boolean(fieldErrors.position)} helperText={fieldErrors.position} required fullWidth />
+    <TextField label="Práctica" value={form.practice} onChange={change('practice')} error={Boolean(fieldErrors.practice)} helperText={fieldErrors.practice} required fullWidth />
     <Box className="form-grid"><FormControl fullWidth><InputLabel id="priority-label">Prioridad</InputLabel><Select labelId="priority-label" label="Prioridad" value={form.priority} onChange={change('priority')}>{Object.entries(priorities).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</Select></FormControl><FormControl fullWidth><InputLabel id="status-label">Estado</InputLabel><Select labelId="status-label" label="Estado" value={form.status} onChange={change('status')}>{Object.entries(searchStatuses).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</Select></FormControl></Box>
-    <Box className="form-grid"><TextField label="Fecha de apertura" type="date" value={form.opening_date} onChange={change('opening_date')} required fullWidth slotProps={{ inputLabel: { shrink: true } }} /><TextField label="Solicitante" value={form.requester} onChange={change('requester')} required fullWidth /></Box>
+    <Box className="form-grid"><TextField label="Fecha de apertura" type="date" value={form.opening_date} onChange={change('opening_date')} error={Boolean(fieldErrors.opening_date)} helperText={fieldErrors.opening_date} required fullWidth slotProps={{ inputLabel: { shrink: true } }} /><TextField label="Solicitante" value={form.requester} onChange={change('requester')} error={Boolean(fieldErrors.requester)} helperText={fieldErrors.requester} required fullWidth /></Box>
     <TextField label="Descripción" value={form.description} onChange={change('description')} multiline minRows={3} fullWidth />
   </DialogContent><DialogActions><Button onClick={onClose} color="inherit">Cancelar</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Guardando…' : search ? 'Guardar cambios' : 'Crear búsqueda'}</Button></DialogActions></Box></Dialog>
 }
@@ -125,20 +156,65 @@ function SearchApplicationsDialog({ search, open, onClose }) {
 function CandidateDialog({ open, onClose, onSaved }) {
   const [form, setForm] = useState(blankCandidate)
   const [saving, setSaving] = useState(false)
-  const change = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [formError, setFormError] = useState('')
+  const change = (field) => (event) => { setForm((current) => ({ ...current, [field]: event.target.value })); setFieldErrors((current) => ({ ...current, [field]: undefined })); setFormError('') }
+
+  const validate = () => {
+    const errors = {}
+    if (!form.first_name.trim()) errors.first_name = 'Ingresa el nombre.'
+    if (!form.last_name.trim()) errors.last_name = 'Ingresa el apellido.'
+    if (!form.email.trim()) errors.email = 'Ingresa el correo electrónico.'
+    else if (!/^\S+@\S+\.\S+$/.test(form.email)) errors.email = 'Ingresa un correo electrónico válido.'
+    if (form.experience_years === '') errors.experience_years = 'Indica los años de experiencia.'
+    if (!form.region.trim()) errors.region = 'Ingresa la región.'
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const selectCv = (event) => {
+    const file = event.target.files?.[0] ?? null
+    if (!file) return
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setFormError('El CV debe estar en formato PDF.')
+      setFieldErrors((current) => ({ ...current, cv_file: 'Selecciona un archivo PDF válido.' }))
+      event.target.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('El CV no puede superar los 5 MB.')
+      setFieldErrors((current) => ({ ...current, cv_file: 'Selecciona un PDF de hasta 5 MB.' }))
+      event.target.value = ''
+      return
+    }
+
+    setForm((current) => ({ ...current, cv_file: file }))
+    setFieldErrors((current) => ({ ...current, cv_file: undefined }))
+    setFormError('')
+  }
+
   const submit = async (event) => {
-    event.preventDefault(); setSaving(true)
+    event.preventDefault()
+    setFormError('')
+    if (!validate()) {
+      setFormError('Completa los campos obligatorios para continuar.')
+      return
+    }
+    setSaving(true)
     const payload = new FormData()
     Object.entries(form).forEach(([key, value]) => { if (value !== '' && value !== null) payload.append(key, value) })
-    try { await api.post('/candidates/', payload); toast.success('Candidato registrado en la base de talentos'); setForm(blankCandidate); onSaved(); onClose() } catch (error) { toast.error(messageFrom(error, 'No fue posible registrar al candidato')) } finally { setSaving(false) }
+    try { await api.post('/candidates/', payload); toast.success('Candidato registrado en la base de talentos'); setForm(blankCandidate); onSaved(); onClose() } catch (error) { const message = messageFrom(error, 'No fue posible registrar al candidato'); setFieldErrors(fieldErrorsFrom(error)); setFormError(message); toast.error(message) } finally { setSaving(false) }
   }
-  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm"><Box component="form" onSubmit={submit}><DialogTitle>Registrar candidato</DialogTitle><DialogContent className="dialog-form">
-    <Box className="form-grid"><TextField label="Nombre" value={form.first_name} onChange={change('first_name')} required fullWidth /><TextField label="Apellido" value={form.last_name} onChange={change('last_name')} required fullWidth /></Box>
-    <TextField label="Correo electrónico" type="email" value={form.email} onChange={change('email')} required fullWidth />
-    <Box className="form-grid"><TextField label="Teléfono" value={form.phone} onChange={change('phone')} fullWidth /><TextField label="Años de experiencia" type="number" inputProps={{ min: 0 }} value={form.experience_years} onChange={change('experience_years')} required fullWidth /></Box>
-    <Box className="form-grid"><TextField label="Región" value={form.region} onChange={change('region')} required fullWidth /><FormControl fullWidth><InputLabel id="modality-label">Modalidad</InputLabel><Select labelId="modality-label" label="Modalidad" value={form.modality} onChange={change('modality')}>{Object.entries(modalities).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</Select></FormControl></Box>
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm"><Box component="form" noValidate onSubmit={submit}><DialogTitle>Registrar candidato</DialogTitle><DialogContent className="dialog-form">
+    {formError && <Alert severity="error">{formError}</Alert>}
+    <Box className="form-grid"><TextField label="Nombre" value={form.first_name} onChange={change('first_name')} error={Boolean(fieldErrors.first_name)} helperText={fieldErrors.first_name} required fullWidth /><TextField label="Apellido" value={form.last_name} onChange={change('last_name')} error={Boolean(fieldErrors.last_name)} helperText={fieldErrors.last_name} required fullWidth /></Box>
+    <TextField label="Correo electrónico" type="email" value={form.email} onChange={change('email')} error={Boolean(fieldErrors.email)} helperText={fieldErrors.email} required fullWidth />
+    <Box className="form-grid"><TextField label="Teléfono" value={form.phone} onChange={change('phone')} fullWidth /><TextField label="Años de experiencia" type="number" inputProps={{ min: 0 }} value={form.experience_years} onChange={change('experience_years')} error={Boolean(fieldErrors.experience_years)} helperText={fieldErrors.experience_years} required fullWidth /></Box>
+    <Box className="form-grid"><TextField label="Región" value={form.region} onChange={change('region')} error={Boolean(fieldErrors.region)} helperText={fieldErrors.region} required fullWidth /><FormControl fullWidth><InputLabel id="modality-label">Modalidad</InputLabel><Select labelId="modality-label" label="Modalidad" value={form.modality} onChange={change('modality')}>{Object.entries(modalities).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</Select></FormControl></Box>
     <TextField label="LinkedIn" type="url" value={form.linkedin} onChange={change('linkedin')} fullWidth />
-    <Button component="label" variant="outlined" color="inherit" className="file-control">{form.cv_file ? form.cv_file.name : 'Adjuntar CV (PDF, máximo 5 MB)'}<input hidden type="file" accept="application/pdf,.pdf" onChange={(event) => setForm((current) => ({ ...current, cv_file: event.target.files?.[0] ?? null }))} /></Button>
+    <Box><Button component="label" variant="outlined" color="inherit" className="file-control" aria-describedby="cv-file-help">{form.cv_file ? form.cv_file.name : 'Adjuntar CV'}<input hidden type="file" accept="application/pdf,.pdf" onChange={selectCv} /></Button><Typography id="cv-file-help" className={`file-help${fieldErrors.cv_file ? ' file-help--error' : ''}`}>{fieldErrors.cv_file ?? 'Opcional · solo PDF, tamaño máximo de 5 MB.'}</Typography></Box>
   </DialogContent><DialogActions><Button onClick={onClose} color="inherit">Cancelar</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Guardando…' : 'Registrar candidato'}</Button></DialogActions></Box></Dialog>
 }
 
@@ -163,12 +239,14 @@ function ApplicationDialog({ candidate, open, onClose, onSaved }) {
   const [searchId, setSearchId] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (!open) return undefined
 
     const request = window.setTimeout(async () => {
       setLoading(true)
+      setFormError('')
       try {
         const response = await api.get('/searches/', { params: { status: 'ACTIVE' } })
         setSearches(response.data)
@@ -188,6 +266,7 @@ function ApplicationDialog({ candidate, open, onClose, onSaved }) {
     if (!candidate || !searchId) return
 
     setSaving(true)
+    setFormError('')
     try {
       await api.post('/applications/', {
         candidate: candidate.id,
@@ -198,7 +277,9 @@ function ApplicationDialog({ candidate, open, onClose, onSaved }) {
       onSaved()
       onClose()
     } catch (error) {
-      toast.error(messageFrom(error, 'No fue posible crear la postulación'))
+      const message = messageFrom(error, 'No fue posible crear la postulación')
+      setFormError(message)
+      toast.error(message)
     } finally {
       setSaving(false)
     }
@@ -208,6 +289,7 @@ function ApplicationDialog({ candidate, open, onClose, onSaved }) {
     <DialogTitle>Asociar a una búsqueda</DialogTitle>
     <DialogContent className="dialog-form">
       <Typography className="dialog-description">Crearás una postulación en estado <strong>Postulado</strong> para {candidate?.full_name ?? 'este candidato'}.</Typography>
+      {formError && <Alert severity="error">{formError}</Alert>}
       {loading ? <Box className="dialog-loading"><CircularProgress size={26} /></Box> : searches.length === 0 ? <Alert severity="info">No hay búsquedas activas disponibles para asociar.</Alert> : <FormControl fullWidth required><InputLabel id="application-search-label">Búsqueda activa</InputLabel><Select labelId="application-search-label" label="Búsqueda activa" value={searchId} onChange={(event) => setSearchId(event.target.value)}>{searches.map((search) => <MenuItem key={search.id} value={String(search.id)}>{search.position} · {search.practice}</MenuItem>)}</Select></FormControl>}
     </DialogContent>
     <DialogActions><Button onClick={onClose} color="inherit">Cancelar</Button><Button type="submit" variant="contained" disabled={loading || saving || !searchId}>{saving ? 'Asociando…' : 'Crear postulación'}</Button></DialogActions>

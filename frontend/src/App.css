@@ -412,6 +412,17 @@
     text-transform: none !important;
 }
 
+.file-help {
+    display: block;
+    margin: 7px 2px 0;
+    color: var(--muted);
+    font-size: 12px !important;
+}
+
+.file-help--error {
+    color: #d32f2f;
+}
+
 .dialog-description {
     color: var(--muted);
     line-height: 1.55 !important;
