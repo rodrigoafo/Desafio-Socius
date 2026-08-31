@@ -106,6 +106,22 @@ class RecruitmentApiTests(APITestCase):
         self.assertEqual(invalid_response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("cv_file", invalid_response.data)
 
+        invalid_phone_response = self.client.post(
+            "/api/candidates/",
+            {
+                "first_name": "Teléfono",
+                "last_name": "Inválido",
+                "email": "telefono.invalido@example.com",
+                "phone": "nueve-uno-dos",
+                "experience_years": 1,
+                "region": "Metropolitana",
+                "modality": "REMOTE",
+            },
+            format="json",
+        )
+        self.assertEqual(invalid_phone_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone", invalid_phone_response.data)
+
     def test_applications_change_status_and_reject_duplicates(self):
         create_response = self.client.post(
             "/api/applications/",

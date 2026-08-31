@@ -60,6 +60,11 @@ class CandidateSerializer(serializers.ModelSerializer):
     def get_full_name(self, candidate):
         return f"{candidate.first_name} {candidate.last_name}"
 
+    def validate_phone(self, phone):
+        if phone and not phone.isdigit():
+            raise serializers.ValidationError("El teléfono solo puede contener números.")
+        return phone
+
     def validate_cv_file(self, cv_file):
         max_size = 5 * 1024 * 1024
         allowed_content_types = {"application/pdf", "application/x-pdf"}

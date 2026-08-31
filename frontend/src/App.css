@@ -319,6 +319,46 @@
     margin-top: 3px;
 }
 
+.actions-cell {
+    min-width: 126px;
+    white-space: nowrap;
+}
+
+.candidate-actions {
+    flex-wrap: nowrap;
+}
+
+.candidate-action {
+    width: 32px !important;
+    height: 32px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 10px !important;
+}
+
+.candidate-action--profile {
+    color: #436b9a !important;
+    background: #eef4fb !important;
+}
+
+.candidate-action--cv {
+    color: #9b6807 !important;
+    background: #fff4da !important;
+}
+
+.candidate-action--apply {
+    color: #08726d !important;
+    background: #e2f4ee !important;
+}
+
+.search-action {
+    color: #5a57a8 !important;
+    background: #eeedfb !important;
+}
+
+.candidate-action:hover {
+    filter: brightness(.96);
+}
+
 .table-state {
     padding: 35px !important;
 }
