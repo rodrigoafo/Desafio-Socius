@@ -43,3 +43,4 @@ Thumbs.db
 
 # Documentation files requested to stay local
 *.md
+!README.md
